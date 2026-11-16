@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>How Many Cuts? Slice a giant fruit into millions of cubes</title>
+<meta name="description" content="A free 3D game in your browser. Swipe to cut a giant fruit: 10 cuts, 100, 500, then 1,000 cuts and millions of cubes. Nothing to install.">
+<meta name="theme-color" content="#1a0d09">
+<meta property="og:title" content="How Many Cuts?">
+<meta property="og:description" content="Swipe to cut a giant fruit into millions of cubes. Free, in your browser.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a0d09'/%3E%3Ccircle cx='32' cy='34' r='19' fill='%23f28a1c'/%3E%3Cpath d='M14 50 50 14' stroke='%23fff3df' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/ArchivoBlack-Regular.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+  @font-face { font-family: 'Archivo Black'; src: url('fonts/ArchivoBlack-Regular.ttf') format('truetype'); font-display: swap; }
+  :root {
+    --ink: #f6f0e6;            /* counters, same white as the videos */
+    --amber: #eca83a;          /* counter labels */
+    --sun: #ffd23f;            /* the hook pill of the videos: main buttons */
+    --sun-ink: #19120c;
+    --bg: #120a07;
+    --card: #1f1410;
+    --card-line: rgba(255, 233, 200, .14);
+    --dim: rgba(246, 240, 230, .66);
+    --bad: #ff6a5a;
+    --display: 'Archivo Black', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif;
+    --text: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
+    --u: min(1vw, 0.6vh);      /* one unit = 1% of the stage width */
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: var(--text); overflow: hidden;
+    overscroll-behavior: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+
+  /* the stage is a portrait column, like a Short; on a wide screen it sits in the middle */
+  #stage { position: fixed; top: 0; bottom: 0; left: 50%; width: min(100vw, 60vh); width: min(100vw, 60dvh); transform: translateX(-50%);
+    overflow: hidden; background: #1a0d09; }
+  #gl, #trail { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #trail { pointer-events: none; }
+  .layer { position: absolute; inset: 0; pointer-events: none; }
+  .layer > * { pointer-events: auto; }
+  [hidden] { display: none !important; }
+
+  /* ---------- top bar */
+  #bar { position: absolute; top: calc(env(safe-area-inset-top) + 2.4 * var(--u)); left: 3 * var(--u); right: 3 * var(--u);
+    left: calc(3 * var(--u)); right: calc(3 * var(--u)); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  body.adtop #bar { top: calc(env(safe-area-inset-top) + 58px); }
+  .ico { width: 44px; height: 44px; border-radius: 50%; background: rgba(0, 0, 0, .38); display: grid; place-items: center;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .ico svg { width: 22px; height: 22px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .ico:active { transform: scale(.92); }
+  #pill { font-family: var(--display); font-size: calc(4.1 * var(--u)); letter-spacing: .02em; background: var(--sun); color: var(--sun-ink);
+    padding: .5em 1em; border-radius: 99px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+  #pill.pop { animation: pop .45s cubic-bezier(.2, 1.5, .4, 1); }
+
+  /* ---------- counters (same look as the videos) */
+  .counter { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--display); line-height: 1; pointer-events: none;
+    text-shadow: 0 .06em .16em rgba(0, 0, 0, .6); }
+  .counter b { display: block; font-weight: 400; font-size: calc(17 * var(--u)); font-variant-numeric: tabular-nums; color: var(--ink);
+    transform-origin: 50% 60%; }
+  .counter span { display: block; margin-top: .5em; font-size: calc(4.6 * var(--u)); color: var(--amber); letter-spacing: .08em; }
+  .counter b.pop { animation: pop .18s ease-out; }
+  #cCuts { top: 15%; }
+  body.adtop #cCuts { top: 18%; }
+  #cCubes { bottom: 9%; }
+  #cCubes b { font-size: calc(13 * var(--u)); }
+
+  #clock { position: absolute; left: 14%; right: 14%; top: 29.2%; height: calc(1.5 * var(--u)); border-radius: 99px; background: rgba(0, 0, 0, .4);
+    overflow: hidden; }
+  body.adtop #clock { top: 32.2%; }
+  #clockFill { height: 100%; width: 100%; background: var(--sun); border-radius: 99px; transform-origin: 0 50%; }
+  #clock.low #clockFill { background: var(--bad); }
+
+  #hint { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; font-family: var(--display); font-size: calc(4.6 * var(--u));
+    letter-spacing: .04em; color: var(--ink); text-shadow: 0 2px 10px rgba(0, 0, 0, .7); pointer-events: none; }
+  #hint i { display: inline-block; font-style: normal; font-size: 1.5em; vertical-align: -.12em; margin: 0 .25em; animation: nudge 1s ease-in-out infinite; }
+  #hint.v i { animation-name: nudgeV; }
+  #hint.bad { color: var(--bad); animation: shake .3s; }
+  #float { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-family: var(--display); font-size: calc(7 * var(--u));
+    color: var(--sun); text-shadow: 0 2px 8px rgba(0, 0, 0, .6); pointer-events: none; opacity: 0; }
+  #float.go { animation: floatUp .5s ease-out; }
+
+  #banner { position: absolute; left: 0; right: 0; top: 36%; text-align: center; font-family: var(--display); pointer-events: none; opacity: 0; }
+  #banner.go { animation: banner 1.5s ease-out both; }
+  #banner b { display: block; font-weight: 400; font-size: calc(13 * var(--u)); color: var(--ink); text-shadow: 0 4px 22px rgba(0, 0, 0, .7); }
+  #banner span { display: inline-block; margin-top: .6em; font-size: calc(5 * var(--u)); background: var(--sun); color: var(--sun-ink);
+    padding: .35em .9em; border-radius: 99px; }
+
+  /* ---------- home */
+  #home { display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: calc(env(safe-area-inset-top) + 9 * var(--u)) calc(4 * var(--u)) calc(env(safe-area-inset-bottom) + 5 * var(--u));
+    background: linear-gradient(180deg, rgba(10, 5, 3, .72) 0%, rgba(10, 5, 3, 0) 30%, rgba(10, 5, 3, 0) 58%, rgba(10, 5, 3, .86) 82%); }
+  body.adtop #home { padding-top: calc(env(safe-area-inset-top) + 9 * var(--u) + 52px); }
+  #home h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: calc(12.5 * var(--u)); line-height: .98; text-align: center;
+    text-shadow: 0 4px 22px rgba(0, 0, 0, .6); text-wrap: balance; }
+  #home h1 em { font-style: normal; color: var(--sun); }
+  #home p { margin: calc(2.4 * var(--u)) 0 0; text-align: center; font-size: calc(4.2 * var(--u)); color: var(--dim); text-wrap: balance; }
+  #homeBottom { width: 100%; display: flex; flex-direction: column; align-items: center; gap: calc(3.2 * var(--u)); }
+  #fruits { display: flex; gap: calc(2 * var(--u)); justify-content: center; flex-wrap: wrap; }
+  .fruit { position: relative; width: calc(16.4 * var(--u)); min-width: 56px; aspect-ratio: 1 / 1.16; border-radius: calc(3.4 * var(--u)); background: rgba(0, 0, 0, .46);
+    border: 2px solid var(--card-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: transform .12s, border-color .12s; }
+  .fruit .e { font-size: calc(7.4 * var(--u)); line-height: 1.1; }
+  .fruit .s { font-size: calc(2.7 * var(--u)); letter-spacing: .08em; color: var(--amber); height: 1.2em; font-family: var(--display); }
+  .fruit[aria-pressed="true"] { border-color: var(--sun); transform: translateY(-4px) scale(1.05); background: rgba(40, 26, 10, .7); }
+  .fruit.locked .e { filter: grayscale(1) brightness(.5); }
+  .fruit.locked::after { content: ''; position: absolute; top: 6px; right: 6px; width: 16px; height: 16px;
+    background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f6f0e6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E"); }
+  #fruitName { font-family: var(--display); font-size: calc(5 * var(--u)); letter-spacing: .04em; min-height: 1.3em; text-align: center; }
+  #fruitName small { display: block; font-family: var(--text); font-size: .68em; letter-spacing: 0; color: var(--dim); margin-top: .3em; min-height: 1.3em; }
+  .btn { font-family: var(--display); font-size: calc(6.4 * var(--u)); letter-spacing: .03em; background: var(--sun); color: var(--sun-ink);
+    padding: .62em 1.9em; border-radius: 99px; box-shadow: 0 .16em 0 #b98a12, 0 12px 28px rgba(0, 0, 0, .45); min-height: 52px; transition: transform .08s; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 .05em 0 #b98a12, 0 6px 14px rgba(0, 0, 0, .4); }
+  .btn[disabled] { filter: grayscale(.8) brightness(.6); cursor: default; }
+  .btn.ghost { background: rgba(255, 255, 255, .1); color: var(--ink); box-shadow: inset 0 0 0 2px var(--card-line); font-size: calc(4.4 * var(--u)); padding: .8em 1.3em; }
+  #play { animation: breathe 1.8s ease-in-out infinite; }
+  #homeLinks { display: flex; gap: 18px; font-size: 13px; }
+  #homeLinks a, #homeLinks button { color: var(--dim); text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px; }
+
+  /* ---------- result sheet */
+  #sheet { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px;
+    background: rgba(8, 4, 2, .62); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); animation: fade .25s ease-out; }
+  .card { width: min(100%, 420px); background: var(--card); border: 1px solid var(--card-line); border-radius: 26px; padding: 22px 20px 20px;
+    text-align: center; box-shadow: 0 24px 60px rgba(0, 0, 0, .55); animation: rise .35s cubic-bezier(.2, 1.2, .4, 1); }
+  .card h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(22px, calc(7 * var(--u)), 34px); color: var(--sun); text-wrap: balance; }
+  .card h2.bad { color: var(--bad); }
+  #stars { font-size: clamp(30px, calc(10 * var(--u)), 46px); letter-spacing: .12em; margin: 8px 0 2px; color: var(--sun); }
+  #stars .off { color: rgba(255, 255, 255, .16); }
+  #big { font-family: var(--display); font-size: clamp(30px, calc(11 * var(--u)), 52px); line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  #bigLabel { font-family: var(--display); color: var(--amber); letter-spacing: .08em; font-size: 14px; margin-top: 6px; }
+  #stats { display: flex; justify-content: center; gap: 10px; margin: 16px 0 4px; }
+  #stats div { flex: 1; background: rgba(255, 255, 255, .06); border-radius: 14px; padding: 10px 6px; }
+  #stats b { display: block; font-family: var(--display); font-weight: 400; font-size: 20px; font-variant-numeric: tabular-nums; }
+  #stats span { font-size: 11px; letter-spacing: .08em; color: var(--dim); text-transform: uppercase; }
+  #note { min-height: 1.3em; font-size: 14px; color: var(--dim); margin: 10px 0 14px; text-wrap: balance; }
+  #note.new { color: var(--sun); font-family: var(--display); }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .card .btn { font-size: clamp(17px, calc(5.2 * var(--u)), 24px); padding: .7em 1.4em; }
+  .card .btn.ghost { font-size: clamp(14px, calc(4 * var(--u)), 18px); }
+
+  /* ---------- ads + consent */
+  .ad { display: grid; place-items: center; overflow: hidden; }
+  #adTop { position: absolute; top: env(safe-area-inset-top); left: 50%; transform: translateX(-50%); z-index: 5; }
+  #ask { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 20; background: var(--card);
+    border: 1px solid var(--card-line); border-radius: 18px; padding: 14px; font-size: 14px; line-height: 1.4; box-shadow: 0 18px 40px rgba(0, 0, 0, .6); }
+  #ask .row { margin-top: 10px; justify-content: flex-end; }
+  #ask button { font-family: var(--display); font-size: 14px; padding: 10px 16px; border-radius: 99px; min-height: 44px; }
+  #askYes { background: var(--sun); color: var(--sun-ink); }
+  #askNo { box-shadow: inset 0 0 0 2px var(--card-line); }
+  #ask a { color: var(--sun); }
+  #toast { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); background: rgba(0, 0, 0, .8); padding: 10px 16px; border-radius: 99px;
+    font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30; white-space: nowrap; }
+  #toast.on { opacity: 1; }
+  #fatal { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: var(--bg); z-index: 50; line-height: 1.5; }
+
+  /* Arabic: the display font has no Arabic letters, so the fallback font is set bold */
+  html[lang="ar"] :is(h1, h2, .btn, #pill, .counter span, #hint, #banner b, #banner span, #fruitName, #note, #stats b, #big, #bigLabel, #ask button) { font-weight: 800; letter-spacing: 0; }
+  @keyframes pop { 0% { transform: scale(1.22); } 100% { transform: scale(1); } }
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  @keyframes nudge { 0%, 100% { transform: translateX(-.22em); } 50% { transform: translateX(.22em); } }
+  @keyframes nudgeV { 0%, 100% { transform: translateY(-.2em); } 50% { transform: translateY(.2em); } }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1.2); } 100% { opacity: 0; transform: translateY(-70px) scale(1); } }
+  @keyframes banner { 0% { opacity: 0; transform: scale(.7); } 14% { opacity: 1; transform: scale(1.06); } 22% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(30px) scale(.96); } }
+  @media (prefers-reduced-motion: reduce) { #play, #hint i { animation: none; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="trail"></canvas>
+
+  <div id="adTop" class="ad" hidden></div>
+
+  <!-- in a round -->
+  <div id="hud" class="layer" hidden>
+    <div id="bar">
+      <button id="bHome" class="ico" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10v9h11v-9"/></svg></button>
+      <div id="pill"></div>
+      <button id="bMute" class="ico" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path id="mOn" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path id="mOff" d="m16 9.5 5 5m0-5-5 5" hidden/></svg></button>
+    </div>
+    <div id="cCuts" class="counter"><b id="nCuts">0</b><span id="lCuts">CUTS</span></div>
+    <div id="clock"><div id="clockFill"></div></div>
+    <div id="float"></div>
+    <div id="banner"><b id="banTitle"></b><span id="banSub"></span></div>
+    <div id="cCubes" class="counter" hidden><b id="nCubes">0</b><span id="lCubes">CUBES</span></div>
+    <div id="hint"></div>
+  </div>
+
+  <!-- home -->
+  <div id="home" class="layer" hidden>
+    <div>
+      <h1 id="title"></h1>
+      <p id="tagline"></p>
+    </div>
+    <div id="homeBottom">
+      <div id="fruitName"></div>
+      <div id="fruits" role="group"></div>
+      <button id="play" class="btn"></button>
+      <div id="homeLinks">
+        <a id="yt" target="_blank" rel="noopener" hidden></a>
+        <button id="langBtn"></button>
+        <a id="privacy" href="privacy.html"></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- end of a game: win or time's up -->
+  <div id="sheet" class="layer" hidden>
+    <div class="card">
+      <h2 id="shTitle"></h2>
+      <div id="stars"></div>
+      <div id="big"></div>
+      <div id="bigLabel"></div>
+      <div id="stats">
+        <div><b id="stTime"></b><span id="stTimeL"></span></div>
+        <div><b id="stBest"></b><span id="stBestL"></span></div>
+      </div>
+      <div id="note"></div>
+      <div class="row">
+        <button id="shMain" class="btn"></button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="shAgain" class="btn ghost"></button>
+        <button id="shShare" class="btn ghost"></button>
+        <button id="shHome" class="btn ghost"></button>
+      </div>
+    </div>
+    <div id="adCard" class="ad" hidden></div>
+  </div>
+
+  <div id="ask" hidden>
+    <span id="askText"></span> <a href="privacy.html" id="askLink"></a>
+    <div class="row"><button id="askNo"></button><button id="askYes"></button></div>
+  </div>
+  <div id="toast"></div>
+</div>
+<script type="module" src="game.js"></script>
+</body>
+</html>

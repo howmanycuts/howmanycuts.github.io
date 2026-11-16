@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · How Many Cuts?</title>
+<style>
+  body { margin: 0; background: #120a07; color: #f6f0e6; font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 18px; margin: 28px 0 6px; color: #ffd23f; }
+  a { color: #ffd23f; }
+  p { margin: 0 0 12px; color: rgba(246, 240, 230, .85); }
+  button { font: inherit; font-weight: 700; background: #ffd23f; color: #19120c; border: 0; border-radius: 99px; padding: 10px 18px; cursor: pointer; min-height: 44px; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="./">← Back to the game</a></p>
+  <h1>Privacy</h1>
+  <p>How Many Cuts? is a free game that runs in your browser. There is no account and nothing to install.</p>
+
+  <h2>What the game saves</h2>
+  <p>Your best times, the fruits you unlocked, your language and the sound setting are saved in your browser, on your device only. They are not sent to us. You can erase them here.</p>
+  <p><button id="wipe">Erase my saved game</button> <span id="done"></span></p>
+
+  <h2>Ads</h2>
+  <p>The game may show banner ads from Adsterra to pay for itself. When ads are shown, Adsterra and its partners can use cookies and similar data (such as your IP address and device type) to choose and measure ads. In Europe, the game asks for your answer first and shows no ads if you say no.</p>
+  <p>You can change your answer here: <button id="adReset">Ask me again</button></p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on the <a href="https://github.com/howmanycuts/howmanycuts.github.io/issues">project page</a>.</p>
+</main>
+<script>
+  document.getElementById('wipe').onclick = () => { try { localStorage.removeItem('howmanycuts.v1'); } catch {} document.getElementById('done').textContent = 'Done.'; };
+  document.getElementById('adReset').onclick = (e) => { try { localStorage.removeItem('howmanycuts.ads'); } catch {} e.target.textContent = 'OK, the game will ask again'; };
+</script>
+</body>
+</html>
